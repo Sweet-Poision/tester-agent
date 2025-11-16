@@ -1,5 +1,4 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
-fr
 
 try:
     llm = ChatGoogleGenerativeAI(
@@ -13,4 +12,3 @@ except Exception as e:  # noqa: BLE001
     llm = None
 
 
-async 

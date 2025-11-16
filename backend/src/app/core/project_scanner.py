@@ -1,45 +1,38 @@
 import logging
 from pathlib import Path
 
-EXCLUDED_DIRS = {
-    "target", "build", "out", ".gradle", ".mvn", "__pycache__", "node_modules", "test", "tests",
-}
-
 LOGGER = logging.getLogger(__name__)
 
-class ProjectScanner:
-    def __init__(self, root_path: str):
-        self.root = Path(root_path).resolve()
+EXCLUDED_DIRS = {
+    "src/test",
+    "build",
+    "target",
+    ".gradle",
+    "node_modeuls",
+}
 
+class JavaScanner:
+    def __init__(self, project_root: Path):
+        self._project_root : Path = project_root
+        self._src_root = project_root / "src" / "main" / "java"
 
-    def scan_java_files(self) -> list[dict]:
-        """Recursively scan for .java files."""
-        files = []
+    def discover_java_files(self) -> list[Path]:
+        """
+        Return a list of all Java source files under src/main/java.
 
-        for path in self.root.rglob("*.java"):
-            # exclude folders like target, build, out, .gradle, .mvn, __pycache__, node_modules, test, tests
-            if any(part in EXCLUDED_DIRS for part in path.parts):
+        It excludes files which are irrlevant build/test directories.
+        """
+        java_files = []
+
+        for path in self._src_root.rglob("*.java"):
+            # check if any excluded dir is in the path
+            if any(excluded in str(path) for excluded in EXCLUDED_DIRS):
+                LOGGER.info("Excluding file from scan: %s", path)
                 continue
 
-            files.append({
-                "path": str(path),
-                "relative_path": str(path.relative_to(self.root)),
-                "filename": path.name,
-            })
+            java_files.append(path)
 
-            if(not files):
-                LOGGER.info("No Java files found in the project.")
-                raise FileNotFoundError("No Java files found in the project.")
+        LOGGER.info("Discovered %d Java source files", len(java_files))
+        return java_files
 
-            LOGGER.info("Found %d Java Files.", len(files))
 
-        return files
-
-    def create_tests_folder(self) -> Path:
-        """Create /tests folder if it doesn't exist inside project."""
-        # We will check in future where to create tests folder
-        tests_folder = self.root / "tests"
-
-        tests_folder.mkdir(parents=True, exist_ok=True)
-        LOGGER.info("Tests folder ensured at: %s", str(tests_folder))
-        return tests_folder

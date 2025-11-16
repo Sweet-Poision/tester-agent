@@ -9,8 +9,9 @@ LOGGER = logging.getLogger(__name__)
 
 class PathUtils:
     def __init__(self, root: str):
-        self.root : Path = Path(root).resolve()
-        self.src_dir : Path | None = None
+        self._root : Path = Path(root).resolve()
+        self._src_dir : Path | None = None
+        self._validation_done : bool = False
 
     def validate_project_structure(self) -> Path:
         self._check_exists()
@@ -18,37 +19,44 @@ class PathUtils:
         self._check_permissions()
         self._detect_project_root()
 
-        LOGGER.info("Project structure validated for PATH %s\nProject found at %s", self.root, self.src_dir)
+        self._validation_done = True
+        LOGGER.info("Project structure validated for PATH %s\nProject found at %s", self._root, self._src_dir)
 
-        return typing.cast("Path", self.src_dir)
+        return typing.cast("Path", self._src_dir)
 
+    @property
+    def src_path(self) -> Path | None:
+        if not self._validation_done:
+            LOGGER.warning("Project structure not validated yet. Call validate_project_structure() first.")
+            return None
+        return self._src_dir
 
     def _check_exists(self) -> None:
-        if not self.root.exists():
-            LOGGER.error("Invalid path: %s does not exist.", self.root)
+        if not self._root.exists():
+            LOGGER.error("Invalid path: %s does not exist.", self._root)
             raise HTTPException(status_code=400, detail="Invalid Path")
 
-        LOGGER.info("Path exists: %s", self.root)
+        LOGGER.info("Path exists: %s", self._root)
 
     def _check_is_directory(self) -> None:
-        if not self.root.is_dir():
-            LOGGER.error("Path is not a directory: %s", self.root)
+        if not self._root.is_dir():
+            LOGGER.error("Path is not a directory: %s", self._root)
             raise HTTPException(status_code=400, detail="Path is not a directory")
 
-        LOGGER.info("Path '%s' is valid.", self.root)
+        LOGGER.info("Path '%s' is valid.", self._root)
 
 
     def _check_permissions(self) -> None:
         """Check read.write permissions to the root folder."""
-        if not os.access(self.root, os.R_OK):
-            LOGGER.error("Folder is not readable: %s", self.root)
-            raise PermissionError("Folder '%s' is not readable.", self.root)
+        if not os.access(self._root, os.R_OK):
+            LOGGER.error("Folder is not readable: %s", self._root)
+            raise PermissionError("Folder '%s' is not readable.", self._root)
 
-        if not os.access(self.root, os.W_OK):
-            LOGGER.error("Folder is not writable: %s", self.root)
-            raise PermissionError("Folder '%s' is not writable.", self.root)
+        if not os.access(self._root, os.W_OK):
+            LOGGER.error("Folder is not writable: %s", self._root)
+            raise PermissionError("Folder '%s' is not writable.", self._root)
 
-        LOGGER.info("Folder '%s' has necessary permissions.", self.root)
+        LOGGER.info("Folder '%s' has necessary permissions.", self._root)
 
     def _detect_project_root(self) -> None:
         """
@@ -58,8 +66,8 @@ class PathUtils:
             - src/
             - and a build file (pom.xml or build.gradle or settings.gradle)
         """
-        LOGGER.info("Scanning for project root in %s", self.root)
-        for path in self.root.rglob("*"):
+        LOGGER.info("Scanning for project root in %s", self._root)
+        for path in self._root.rglob("*"):
             if not path.is_dir():
                 continue
 
@@ -75,9 +83,9 @@ class PathUtils:
             ]
 
             if any(b.exists() for b in build_files):
-                self.src_dir = path
+                self._src_dir = path
                 print(path)
-                LOGGER.info("Detected project root: %s", self.src_dir)
+                LOGGER.info("Detected project root: %s", self._src_dir)
                 return
 
         raise ValueError("Could not detect project root with src/ and build file.")

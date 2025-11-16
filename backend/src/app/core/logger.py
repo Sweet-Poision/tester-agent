@@ -2,30 +2,43 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-LOG_FILE = Path("../logs/app.log")
-LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+# logs folder always relative to project root
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+LOG_DIR = PROJECT_ROOT / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-# Create the logger
-LOGGER = logging.getLogger("app_logger")
-LOGGER.setLevel(logging.INFO)
+LOG_FILE = LOG_DIR / "app.log"
 
-# File logger with rotation (5MB each, keep 5 backups)
-file_handler = RotatingFileHandler(
-    LOG_FILE,
-    maxBytes=5_000_000,
-    backupCount=5,
-)
-file_handler.setLevel(logging.INFO)
+def setup_logging():
+    # Avoid duplicate handlers if setup_logging is called multiple times
+    if logging.getLogger().handlers:
+        return
 
-# Formatter: timestamp | level | message
-formatter = logging.Formatter(
-    "%(asctime)s | %(levelname)s | %(message)s",
-    "%Y-%m-%d %H:%M:%S",
-)
+    # Root logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
 
-file_handler.setFormatter(formatter)
-LOGGER.addHandler(file_handler)
+    # File handler (rotating)
+    file_handler = RotatingFileHandler(
+        LOG_FILE,
+        maxBytes=5_000_000,
+        backupCount=5,
+    )
+    file_handler.setLevel(logging.INFO)
 
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
 
-def get_logger():
-    return LOGGER
+    # Formatter: timestamp | level | logger_name | message
+    formatter = logging.Formatter(
+        "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        "%Y-%m-%d %H:%M:%S",
+    )
+
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+
+    # Attach handlers
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)

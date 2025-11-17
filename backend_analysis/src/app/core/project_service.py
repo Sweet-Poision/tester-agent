@@ -34,7 +34,7 @@ class ProjectService:
         project.parsed_classes = parser.parse_all()
 
         # populating dependencies using AST
-        analyzer = ASTDependencyAnalyzer(parsed_classes=project.parsed_classes)
+        analyzer = ASTDependencyAnalyzer(parsed_files=project.parsed_classes)
         analyzer.populate_dependencies()
 
         # build dependency graph

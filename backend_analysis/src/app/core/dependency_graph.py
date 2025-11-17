@@ -7,24 +7,24 @@ LOGGER = logging.getLogger(__name__)
 class DependencyGraphBuilder:
     """
     Builds a dependency graph from parsed Java classes.
-    
+
     Stores class relationships and provides methods to query and update graph.
     """
 
-    def __init__(self, parsed_classes: list[ParsedFile]):
+    def __init__(self, parsed_files: list[ParsedFile]):
         """
         Constructor.
 
         Args:
-            parsed_classes: {file_path: [class_info_dicts]}
+            parsed_files: {file_path: [class_info_dicts]}
 
         """
-        self.parsed_classes = parsed_classes
+        self.parsed_files = parsed_files
         self.graph: dict[str, dict] = {}
 
     def build(self) -> dict[str, dict]:
         """Construct the dependency graph."""
-        for parsed_file in self.parsed_classes:
+        for parsed_file in self.parsed_files:
             file_path = parsed_file.file_path
 
             for cls in parsed_file.classes:
@@ -34,7 +34,14 @@ class DependencyGraphBuilder:
                     "extends" : cls.extends,
                     "implements" : cls.implements,
                     "dependencies" : cls.dependencies,
-                    "methods": [method.name for method in cls.methods],
+                    "methods": [
+                        {
+                            "name" : m.name,
+                            "return_type" : m.return_type,
+                            "parameters" : [{"name" : p.name, "type" : p.type} for p in m.parameters],
+                        }
+                        for m in cls.methods
+                    ],
                 }
         LOGGER.info("Dependency graph build with %d classes", len(self.graph))
         return self.graph
